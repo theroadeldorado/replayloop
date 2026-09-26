@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    name: Core (Linux, sanitizers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test with ASan + UBSan
+        working-directory: core
+        run: make test CXXFLAGS="-std=c++17 -O1 -g -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer"
+
+  core-macos:
+    name: Core (macOS, for iOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        working-directory: core
+        run: make test CXX=clang++
+
+  windows:
+    name: Windows app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Core (MSVC) + tests
+        shell: pwsh
+        run: |
+          cmake -S core -B core/build/x64 -A x64 -DSWINGCORE_TESTS=ON
+          cmake --build core/build/x64 --config Release --parallel
+          ctest --test-dir core/build/x64 -C Release --output-on-failure
+      - name: Build SwingLoop (x64)
+        shell: pwsh
+        run: dotnet build windows/SwingLoop.Windows/SwingLoop.Windows.csproj -c Release -p:Platform=x64 -r win-x64 "-p:SwingCoreDir=$PWD/core/build/x64/Release"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SwingLoop-win-x64
+          path: windows/SwingLoop.Windows/bin/x64/Release/

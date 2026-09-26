@@ -1,0 +1,10 @@
+# build output
+core/build/
+bin/
+obj/
+*.user
+.vs/
+
+# pose model (large, fetched by tools/export_movenet.py)
+windows/SwingLoop.Windows/Models/*.onnx
+tools/.movenet/

@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="SwingLoop.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:SwingLoop.Controls"
+    xmlns:vm="using:SwingLoop.ViewModels"
+    xmlns:models="using:SwingLoop.Models"
+    Title="SwingLoop">
+
+    <Grid x:Name="Root" Background="{StaticResource StageBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ============================================================ title bar -->
+        <Grid x:Name="AppTitleBar" Padding="16,0,150,0" ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Ellipse Width="12" Height="12" Fill="{StaticResource GolferBrush}" />
+                <TextBlock Text="SwingLoop" FontWeight="SemiBold" FontSize="15" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="{StaticResource MutedTextBrush}" FontSize="13">
+                <Run Text="{x:Bind ViewModel.SessionName, Mode=OneWay}" />
+                <Run Text=" · " />
+                <Run Text="{x:Bind ViewModel.ShotCountText, Mode=OneWay}" />
+            </TextBlock>
+            <Border Grid.Column="3" VerticalAlignment="Center" CornerRadius="12" Padding="10,4"
+                    Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource SubtleBorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse x:Name="GolferDot" Width="9" Height="9" VerticalAlignment="Center"
+                             Fill="{x:Bind GolferBrush(ViewModel.GolferInView), Mode=OneWay}" />
+                    <TextBlock Text="{x:Bind ViewModel.PhaseText, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============================================================ toolbar -->
+        <Grid Grid.Row="1" Padding="12,4,12,8" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <SelectorBar x:Name="ModeBar" SelectionChanged="ModeBar_SelectionChanged">
+                <SelectorBarItem x:Name="LiveModeItem" Text="Live" IsSelected="True">
+                    <SelectorBarItem.Icon><FontIcon Glyph="&#xE714;" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Name="ReplayModeItem" Text="Replay">
+                    <SelectorBarItem.Icon><FontIcon Glyph="&#xE8EE;" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem x:Name="CompareModeItem" Text="Compare">
+                    <SelectorBarItem.Icon><FontIcon Glyph="&#xE8A9;" /></SelectorBarItem.Icon>
+                </SelectorBarItem>
+            </SelectorBar>
+
+            <Button Grid.Column="2" Click="SaveSwing_Click" CornerRadius="18" Padding="16,6"
+                    ToolTipService.ToolTip="Keep the last few seconds as a shot (M)">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="12" Height="12" Fill="{StaticResource CaptureBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Save swing" />
+                </StackPanel>
+            </Button>
+
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2">
+                <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Sessions" Click="Sessions_Click">
+                    <FontIcon Glyph="&#xE8B7;" FontSize="16" />
+                    <Button.Flyout>
+                        <Flyout x:Name="SessionsFlyout" Placement="BottomEdgeAlignedRight">
+                            <StackPanel Width="340" Spacing="8">
+                                <TextBlock Text="Sessions" FontWeight="SemiBold" />
+                                <Button x:Name="BackToLiveButton" Content="Back to current session" Click="BackToLive_Click"
+                                        HorizontalAlignment="Stretch" Visibility="{x:Bind Vis(ViewModel.IsReviewingPast), Mode=OneWay}" />
+                                <ListView x:Name="SessionsList" ItemsSource="{x:Bind ViewModel.PastSessions}" MaxHeight="420"
+                                          IsItemClickEnabled="True" SelectionMode="None" ItemClick="SessionsList_ItemClick">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="models:SessionSummaryDto">
+                                            <StackPanel Padding="0,6">
+                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{x:Bind Subtitle}" FontSize="12" Foreground="{StaticResource MutedTextBrush}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <Button Content="Open sessions folder" Click="OpenFolder_Click" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
+                <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Camera layout">
+                    <FontIcon Glyph="&#xF0E2;" FontSize="16" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <ToggleMenuFlyoutItem x:Name="MultiLiveItem" Text="Show all cameras live" Click="Layout_Changed" />
+                            <ToggleMenuFlyoutItem x:Name="MultiReplayItem" Text="Replay all angles" Click="Layout_Changed" />
+                            <ToggleMenuFlyoutItem x:Name="LiveInsetItem" Text="Live preview inset during replay" Click="Layout_Changed" />
+                            <MenuFlyoutSeparator />
+                            <RadioMenuFlyoutItem Text="Each camera's own shape" GroupName="aspect" Tag="off" Click="Aspect_Click" x:Name="AspectOff" />
+                            <RadioMenuFlyoutItem Text="Crop all to 16:9" GroupName="aspect" Tag="16:9" Click="Aspect_Click" />
+                            <RadioMenuFlyoutItem Text="Crop all to 4:3" GroupName="aspect" Tag="4:3" Click="Aspect_Click" />
+                            <RadioMenuFlyoutItem Text="Crop all to 1:1" GroupName="aspect" Tag="1:1" Click="Aspect_Click" />
+                            <RadioMenuFlyoutItem Text="Crop all to 9:16 (portrait)" GroupName="aspect" Tag="9:16" Click="Aspect_Click" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+
+                <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Picture-in-picture (P)" Click="Pip_Click">
+                    <FontIcon Glyph="&#xE8A7;" FontSize="16" />
+                </Button>
+
+                <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Cast">
+                    <FontIcon Glyph="&#xEC15;" FontSize="16" />
+                    <Button.Flyout>
+                        <Flyout x:Name="CastFlyout" Placement="BottomEdgeAlignedRight" Opening="CastFlyout_Opening">
+                            <StackPanel Width="320" Spacing="10">
+                                <TextBlock Text="Cast replay to a TV" FontWeight="SemiBold" />
+                                <ListView x:Name="CastDevices" SelectionMode="None" IsItemClickEnabled="True"
+                                          ItemClick="CastDevices_ItemClick" MaxHeight="220" />
+                                <TextBlock x:Name="CastStatus" FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                                <Button x:Name="StopCastButton" Content="Stop casting" Click="StopCast_Click" Visibility="Collapsed" HorizontalAlignment="Stretch" />
+                                <MenuFlyoutSeparator />
+                                <Button Content="Mirror whole screen (Win+K)" Click="Mirror_Click" HorizontalAlignment="Stretch" />
+                                <TextBlock FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap"
+                                           Text="Mirroring sends the full app, or the PiP window over your simulator, to any Miracast TV. For AirPlay, use SwingLoop on iPhone or iPad." />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
+                <ToggleButton x:Name="SettingsToggle" Style="{StaticResource ToolButton}" Width="36" Height="36"
+                              ToolTipService.ToolTip="Settings" Checked="SettingsToggle_Changed" Unchecked="SettingsToggle_Changed">
+                    <FontIcon Glyph="&#xE713;" FontSize="16" />
+                </ToggleButton>
+
+                <Button Style="{StaticResource IconButton}" Click="EndSession_Click" ToolTipService.ToolTip="End this session and start a new one">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE71A;" FontSize="14" />
+                        <TextBlock Text="End session" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ============================================================ stage + settings pane -->
+        <SplitView x:Name="Split" Grid.Row="2" PanePlacement="Right" DisplayMode="Inline" OpenPaneLength="380"
+                   PaneBackground="{StaticResource PanelBrush}">
+            <SplitView.Content>
+                <Grid x:Name="Stage" Margin="12,0,12,0">
+                    <controls:VideoTilesPanel x:Name="LiveTiles" />
+                    <controls:VideoTilesPanel x:Name="ReplayTiles" Visibility="Collapsed" />
+
+                    <!-- live preview inset while replaying -->
+                    <Border x:Name="LiveInsetHost" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16"
+                            Width="320" Height="180" CornerRadius="10" BorderThickness="2"
+                            BorderBrush="{StaticResource SubtleBorderBrush}" Visibility="Collapsed" />
+
+                    <!-- empty state -->
+                    <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" Visibility="Collapsed">
+                        <FontIcon Glyph="&#xE714;" FontSize="40" Foreground="{StaticResource MutedTextBrush}" />
+                        <TextBlock x:Name="EmptyTitle" Text="No camera connected" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="EmptySubtitle" Text="Plug in a webcam, or open Settings to choose one." TextAlignment="Center"
+                                   Foreground="{StaticResource MutedTextBrush}" MaxWidth="420" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <!-- drawing toolbar -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12" Padding="6" CornerRadius="14"
+                            Background="{StaticResource ChromeBrush}" BorderBrush="{StaticResource SubtleBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="4">
+                            <ToggleButton x:Name="ToolSelect" Style="{StaticResource ToolButton}" Tag="Select" Click="Tool_Click" ToolTipService.ToolTip="Select / edit (V)">
+                                <FontIcon Glyph="&#xE8B0;" FontSize="16" />
+                            </ToggleButton>
+                            <ToggleButton x:Name="ToolLine" Style="{StaticResource ToolButton}" Tag="Line" Click="Tool_Click" Content="╱" ToolTipService.ToolTip="Line (L)" />
+                            <ToggleButton x:Name="ToolArrow" Style="{StaticResource ToolButton}" Tag="Arrow" Click="Tool_Click" Content="↗" ToolTipService.ToolTip="Arrow (A)" />
+                            <ToggleButton x:Name="ToolCircle" Style="{StaticResource ToolButton}" Tag="Circle" Click="Tool_Click" Content="◯" ToolTipService.ToolTip="Circle (C)" />
+                            <ToggleButton x:Name="ToolRect" Style="{StaticResource ToolButton}" Tag="Rectangle" Click="Tool_Click" Content="▭" ToolTipService.ToolTip="Box (B)" />
+                            <ToggleButton x:Name="ToolAngle" Style="{StaticResource ToolButton}" Tag="Angle" Click="Tool_Click" Content="∠" ToolTipService.ToolTip="Angle: drag one arm, then click the other (G)" />
+                            <ToggleButton x:Name="ToolFree" Style="{StaticResource ToolButton}" Tag="Freehand" Click="Tool_Click" Content="✎" ToolTipService.ToolTip="Freehand (F)" />
+                            <Rectangle Height="1" Fill="{StaticResource SubtleBorderBrush}" Margin="4,4" />
+                            <ItemsControl x:Name="Swatches">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Spacing="6" HorizontalAlignment="Center" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <Button Style="{StaticResource IconButton}" HorizontalAlignment="Center" ToolTipService.ToolTip="Line width">
+                                <FontIcon Glyph="&#xE76D;" FontSize="14" />
+                                <Button.Flyout>
+                                    <Flyout Placement="Right">
+                                        <StackPanel Width="220" Spacing="8">
+                                            <Slider x:Name="StrokeSlider" Header="Line width" Minimum="1" Maximum="16" StepFrequency="1"
+                                                    Value="4" ValueChanged="StrokeSlider_ValueChanged" />
+                                            <ToggleSwitch x:Name="DashedSwitch" Header="Dashed" Toggled="DashedSwitch_Toggled" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                            <ToggleButton x:Name="PersistToggle" Style="{StaticResource ToolButton}" Click="PersistToggle_Click"
+                                          ToolTipService.ToolTip="Keep new drawings on every shot from this camera (K)">
+                                <FontIcon Glyph="&#xE718;" FontSize="16" />
+                            </ToggleButton>
+                            <Button Style="{StaticResource IconButton}" Click="Undo_Click" ToolTipService.ToolTip="Undo (Ctrl+Z)">
+                                <FontIcon Glyph="&#xE7A7;" FontSize="14" />
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Delete / clear">
+                                <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="Right">
+                                        <MenuFlyoutItem Text="Delete selected (Del)" Click="DeleteShape_Click" />
+                                        <MenuFlyoutItem Text="Pin / unpin selected to every shot" Click="TogglePersist_Click" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Clear this shot's drawings" Click="ClearShot_Click" />
+                                        <MenuFlyoutItem Text="Clear drawings kept on every shot" Click="ClearPersistent_Click" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <InfoBar x:Name="Toast" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" MaxWidth="560"
+                             IsClosable="True" IsOpen="False" />
+                </Grid>
+            </SplitView.Content>
+
+            <SplitView.Pane>
+                <ScrollViewer Padding="20,8,20,20">
+                    <StackPanel x:Name="SettingsPanel" Spacing="6">
+                        <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,0" />
+
+                        <TextBlock Text="CAMERAS" Style="{StaticResource SectionHeader}" />
+                        <ItemsControl x:Name="CameraSettingsList" ItemsSource="{x:Bind ViewModel.Cameras}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CameraViewModel">
+                                    <Border Margin="0,0,0,10" Padding="12" CornerRadius="10" BorderThickness="1"
+                                            BorderBrush="{StaticResource SubtleBorderBrush}">
+                                        <StackPanel Spacing="8">
+                                            <Grid>
+                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,60,0" />
+                                                <ToggleSwitch HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0"
+                                                              IsOn="{x:Bind Settings.Enabled}" Tag="{x:Bind}" Toggled="CameraEnabled_Toggled" />
+                                            </Grid>
+                                            <TextBlock Text="{x:Bind Status, Mode=OneWay}" FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                                            <ComboBox Header="Position" ItemsSource="{x:Bind vm:CameraViewModel.Positions}" HorizontalAlignment="Stretch"
+                                                      SelectedIndex="{x:Bind PositionIndex}" Tag="{x:Bind}" SelectionChanged="CameraPosition_Changed" />
+                                            <ComboBox Header="Mounting rotation" ItemsSource="{x:Bind vm:CameraViewModel.Rotations}" HorizontalAlignment="Stretch"
+                                                      SelectedIndex="{x:Bind RotationIndex}" Tag="{x:Bind}" SelectionChanged="CameraRotation_Changed" />
+                                            <Slider Header="Level (fine rotation)" Minimum="-15" Maximum="15" StepFrequency="0.5"
+                                                    Value="{x:Bind FineRotationValue}" Tag="{x:Bind}" ValueChanged="CameraFine_Changed" />
+                                            <Slider Header="{x:Bind ZoomText}" Minimum="1" Maximum="8" StepFrequency="0.1"
+                                                    Value="{x:Bind ZoomValue}" Tag="{x:Bind}" ValueChanged="CameraZoom_Changed" />
+                                            <CheckBox Content="Mirror" IsChecked="{x:Bind Settings.Mirror}" Tag="{x:Bind}" Click="CameraFlag_Click" />
+                                            <CheckBox Content="Show in live view" IsChecked="{x:Bind Settings.ShowLive}" Tag="{x:Bind}" Click="CameraFlag_Click" />
+                                            <CheckBox Content="Show in replay" IsChecked="{x:Bind Settings.ShowReplay}" Tag="{x:Bind}" Click="CameraFlag_Click" />
+                                            <RadioButton Content="Use for swing detection" GroupName="detector" IsChecked="{x:Bind Settings.IsDetector}"
+                                                         Tag="{x:Bind}" Checked="CameraDetector_Checked" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="Rescan cameras" Click="Rescan_Click" />
+                        <TextBlock FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap"
+                                   Text="Phone cameras: open SwingLoop on iPhone or Android, choose Camera mode, and it will appear here (coming in the phone apps)." />
+
+                        <TextBlock Text="SWING DETECTION" Style="{StaticResource SectionHeader}" />
+                        <TextBlock x:Name="PoseStatusText" FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="AudioStatusText" FontSize="12" Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <ProgressBar x:Name="AudioMeter" Maximum="60" Value="0" Margin="0,4,0,4" />
+                        <ToggleSwitch x:Name="UsePoseSwitch" Header="Watch the golfer (pose)" Toggled="Detection_Changed" />
+                        <ToggleSwitch x:Name="UseAudioSwitch" Header="Listen for impact" Toggled="Detection_Changed" />
+                        <ToggleSwitch x:Name="RequireImpactSwitch" Header="Ignore swings with no ball struck" Toggled="Detection_Changed" />
+                        <ToggleSwitch x:Name="SavePracticeSwitch" Header="Also save practice swings" Toggled="Detection_Changed" />
+                        <Slider x:Name="PreRollSlider" Header="Seconds before impact" Minimum="1" Maximum="4" StepFrequency="0.25" ValueChanged="Roll_Changed" />
+                        <Slider x:Name="PostRollSlider" Header="Seconds after impact" Minimum="0.5" Maximum="3" StepFrequency="0.25" ValueChanged="Roll_Changed" />
+                        <ComboBox x:Name="QualityCombo" Header="Capture quality" HorizontalAlignment="Stretch" SelectionChanged="Quality_Changed">
+                            <ComboBoxItem Content="720p (lighter, more fps on some cameras)" Tag="720" />
+                            <ComboBoxItem Content="1080p" Tag="1080" />
+                            <ComboBoxItem Content="4K (needs lots of memory)" Tag="2160" />
+                        </ComboBox>
+
+                        <TextBlock Text="REPLAY" Style="{StaticResource SectionHeader}" />
+                        <ToggleSwitch x:Name="AutoReplaySwitch" Header="Loop the newest swing automatically" Toggled="ReplaySwitch_Toggled" />
+                        <ComboBox x:Name="DefaultSpeedCombo" Header="Default speed" HorizontalAlignment="Stretch" SelectionChanged="ReplayCombo_Changed">
+                            <ComboBoxItem Content="1×" Tag="1" />
+                            <ComboBoxItem Content="½×" Tag="0.5" />
+                            <ComboBoxItem Content="¼×" Tag="0.25" />
+                            <ComboBoxItem Content="⅛×" Tag="0.125" />
+                        </ComboBox>
+
+                        <TextBlock Text="PICTURE-IN-PICTURE" Style="{StaticResource SectionHeader}" />
+                        <ComboBox x:Name="PipContentCombo" Header="Shows" HorizontalAlignment="Stretch" SelectionChanged="PipCombo_Changed">
+                            <ComboBoxItem Content="Replay" Tag="replay" />
+                            <ComboBoxItem Content="Live" Tag="live" />
+                            <ComboBoxItem Content="Replay and live" Tag="both" />
+                        </ComboBox>
+                        <ToggleSwitch x:Name="PipAspectSwitch" Header="Keep video shape when resizing" Toggled="PipSwitch_Toggled" />
+                        <ToggleSwitch x:Name="PipDrawingsSwitch" Header="Show drawings" Toggled="PipSwitch_Toggled" />
+
+                        <TextBlock Text="STORAGE" Style="{StaticResource SectionHeader}" />
+                        <TextBlock x:Name="SessionsRootText" FontSize="12" TextWrapping="Wrap" />
+                        <Button Content="Change folder…" Click="ChangeFolder_Click" />
+
+                        <TextBlock x:Name="AboutText" FontSize="11" Margin="0,24,0,0" Foreground="{StaticResource MutedTextBrush}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </SplitView.Pane>
+        </SplitView>
+
+        <!-- ============================================================ transport -->
+        <Grid x:Name="Transport" Grid.Row="3" Padding="16,8" ColumnSpacing="10" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Style="{StaticResource IconButton}" Click="StepBack_Click" ToolTipService.ToolTip="Back one frame (←)">
+                    <FontIcon Glyph="&#xE892;" FontSize="14" />
+                </Button>
+                <Button Style="{StaticResource IconButton}" Click="PlayPause_Click" ToolTipService.ToolTip="Play / pause (Space)" Width="44">
+                    <FontIcon x:Name="PlayGlyph" Glyph="&#xE769;" FontSize="18" />
+                </Button>
+                <Button Style="{StaticResource IconButton}" Click="StepForward_Click" ToolTipService.ToolTip="Forward one frame (→)">
+                    <FontIcon Glyph="&#xE893;" FontSize="14" />
+                </Button>
+                <Button Style="{StaticResource IconButton}" Click="Impact_Click" ToolTipService.ToolTip="Jump to impact (I)">
+                    <TextBlock Text="Impact" FontSize="12" />
+                </Button>
+            </StackPanel>
+
+            <SelectorBar x:Name="SpeedBar" Grid.Column="1" SelectionChanged="SpeedBar_SelectionChanged">
+                <SelectorBarItem Text="1×" Tag="1" />
+                <SelectorBarItem Text="½×" Tag="0.5" />
+                <SelectorBarItem Text="¼×" Tag="0.25" />
+                <SelectorBarItem Text="⅛×" Tag="0.125" />
+            </SelectorBar>
+
+            <Grid Grid.Column="2" VerticalAlignment="Center">
+                <Slider x:Name="Scrubber" Minimum="0" Maximum="1" StepFrequency="0.001" IsThumbToolTipEnabled="False"
+                        ValueChanged="Scrubber_ValueChanged" />
+                <Canvas x:Name="ImpactMarkerCanvas" IsHitTestVisible="False" Height="4" VerticalAlignment="Bottom" Margin="0,0,0,2">
+                    <Rectangle x:Name="ImpactMarker" Width="3" Height="12" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource StarBrush}" Canvas.Top="-8" />
+                </Canvas>
+            </Grid>
+
+            <TextBlock x:Name="TimeText" Grid.Column="3" VerticalAlignment="Center" FontSize="12" FontFamily="Consolas"
+                       Foreground="{StaticResource MutedTextBrush}" MinWidth="110" />
+
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                <ToggleButton x:Name="GhostToggle" Content="Overlay" Height="36" CornerRadius="8" Visibility="Collapsed"
+                              Click="Ghost_Click" ToolTipService.ToolTip="Lay the second swing over the first, half transparent" />
+                <ToggleButton x:Name="StarToggle" Style="{StaticResource ToolButton}" Width="36" Height="36" Click="Star_Click" ToolTipService.ToolTip="Star (S)">
+                    <FontIcon x:Name="StarGlyph" Glyph="&#xE734;" FontSize="16" />
+                </ToggleButton>
+                <TextBox x:Name="CommentBox" PlaceholderText="Add a note…" Width="220" VerticalAlignment="Center"
+                         LostFocus="CommentBox_LostFocus" KeyDown="CommentBox_KeyDown" />
+                <ComboBox x:Name="ClubBox" PlaceholderText="Club" IsEditable="True" Width="100" VerticalAlignment="Center"
+                          SelectionChanged="ClubBox_Changed" TextSubmitted="ClubBox_TextSubmitted" />
+                <Button Style="{StaticResource IconButton}" ToolTipService.ToolTip="Share or save">
+                    <FontIcon Glyph="&#xE72D;" FontSize="16" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="TopEdgeAlignedRight">
+                            <MenuFlyoutItem Text="Share video with drawings" Tag="share-video-marked" Click="Export_Click" />
+                            <MenuFlyoutItem Text="Share video without drawings" Tag="share-video-clean" Click="Export_Click" />
+                            <MenuFlyoutItem Text="Share this frame with drawings" Tag="share-still-marked" Click="Export_Click" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Save video with drawings…" Tag="save-video-marked" Click="Export_Click" />
+                            <MenuFlyoutItem Text="Save video without drawings…" Tag="save-video-clean" Click="Export_Click" />
+                            <MenuFlyoutItem Text="Save this frame with drawings…" Tag="save-still-marked" Click="Export_Click" />
+                            <MenuFlyoutItem Text="Save this frame without drawings…" Tag="save-still-clean" Click="Export_Click" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Delete shot" Click="DeleteShot_Click" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ============================================================ shot strip -->
+        <Grid Grid.Row="4" Padding="12,0,12,12">
+            <ListView x:Name="ShotStrip" ItemsSource="{x:Bind ViewModel.Shots}" SelectionMode="Single" Height="118"
+                      ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollMode="Disabled" SelectionChanged="ShotStrip_SelectionChanged"
+                      RightTapped="ShotStrip_RightTapped">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                        <Setter Property="Padding" Value="3" />
+                        <Setter Property="Margin" Value="0,0,6,0" />
+                        <Setter Property="MinWidth" Value="0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShotViewModel">
+                        <Grid Width="168" Height="104" CornerRadius="8" Background="#FF1C1C21">
+                            <Image Source="{x:Bind Thumbnail}" Stretch="UniformToFill" />
+                            <Border VerticalAlignment="Bottom" Padding="8,4">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0" />
+                                        <GradientStop Color="#CC000000" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Grid>
+                                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="13" />
+                                    <TextBlock Text="{x:Bind TempoText}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                               Foreground="{StaticResource MutedTextBrush}" />
+                                </Grid>
+                            </Border>
+                            <FontIcon Glyph="&#xE735;" FontSize="14" Foreground="{StaticResource StarBrush}" Margin="6"
+                                      HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="{x:Bind StarVisibility, Mode=OneWay}" />
+                            <FontIcon Glyph="&#xE90A;" FontSize="12" Margin="6" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                      Visibility="{x:Bind CommentVisibility, Mode=OneWay}" />
+                            <Border Visibility="{x:Bind PracticeVisibility}" Background="#CC636366" CornerRadius="4" Padding="4,1"
+                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0">
+                                <TextBlock Text="practice" FontSize="10" />
+                            </Border>
+                            <Border Visibility="{x:Bind CompareVisibility, Mode=OneWay}" BorderBrush="#FF0A84FF" BorderThickness="2" CornerRadius="8" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <TextBlock x:Name="StripHint" Text="Swings you hit appear here. Ctrl+click a second shot to compare."
+                       Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="13" />
+        </Grid>
+    </Grid>
+</Window>
