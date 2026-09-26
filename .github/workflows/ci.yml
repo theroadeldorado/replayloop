@@ -43,4 +43,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: SwingLoop-win-x64
-          path: windows/SwingLoop.Windows/bin/x64/Release/
+          # The wildcard makes win-x64/ the zip root, so SwingLoop.exe is at the top.
+          path: windows/SwingLoop.Windows/bin/x64/Release/*/win-x64/
+          if-no-files-found: error
