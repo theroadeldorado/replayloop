@@ -43,6 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: SwingLoop-win-x64
-          # The wildcard makes win-x64/ the zip root, so SwingLoop.exe is at the top.
-          path: windows/SwingLoop.Windows/bin/x64/Release/*/win-x64/
+          # Upload the output folder itself, so SwingLoop.exe is at the top of the zip.
+          # Keep the TFM in sync with SwingLoop.Windows.csproj.
+          path: windows/SwingLoop.Windows/bin/x64/Release/net8.0-windows10.0.22621.0/win-x64/
           if-no-files-found: error
