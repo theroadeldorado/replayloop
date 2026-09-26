@@ -1454,7 +1454,7 @@ public sealed partial class MainWindow : Window
     }
 
     // x:Bind helpers
-    public static Visibility Vis(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility Vis(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
 
     public Brush GolferBrush(bool present) =>
         (Brush)Application.Current.Resources[present ? "GolferBrush" : "IdleBrush"];
