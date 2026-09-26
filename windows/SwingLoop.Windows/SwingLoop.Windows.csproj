@@ -17,6 +17,8 @@
     <!-- Unpackaged, self-contained: runs from the build folder, no MSIX install needed. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Use the PRI/MSIX build tasks from the Windows App SDK package, so `dotnet build` works without Visual Studio. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
