@@ -17,7 +17,8 @@
 - [x] Windows: cast replay (Miracast/DLNA), mirror everything (Win+K)
 - [x] Windows: share/save video or frame, with or without drawings
 - [x] Windows: optical zoom where the camera supports it, digital otherwise; mounting rotation + fine leveling; mirror
-- [ ] **Verify on hardware**: build in CI / Visual Studio and test with real webcams (see README, "Status")
+- [x] Builds in CI (MSVC core + tests, WinUI app)
+- [ ] **Verify on hardware**: run with real webcams (see README, "Status")
 
 ## Phase 2: phones as cameras
 

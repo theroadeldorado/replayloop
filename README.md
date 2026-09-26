@@ -27,7 +27,7 @@ C++ core (see the [roadmap](docs/ROADMAP.md)).
 | Part | State |
 |---|---|
 | `core/`: swing detection, sessions, drawings, layout | Built and tested (20 test suites, clean under ASan/UBSan) |
-| `windows/`: WinUI 3 app | Complete MVP source; **not yet compiled or run**. It was written on Linux, so it needs a first build on Windows (or the CI workflow) to catch compile errors and to test with real cameras. |
+| `windows/`: WinUI 3 app | MVP builds in CI (download `SwingLoop-win-x64` from the Actions run). **Not yet run on hardware**: needs testing with real cameras. |
 | Phone camera mode | Protocol designed ([CAMERA_PROTOCOL.md](docs/CAMERA_PROTOCOL.md)) |
 | iOS / Android apps | Planned ([ARCHITECTURE.md](docs/ARCHITECTURE.md)) |
 
